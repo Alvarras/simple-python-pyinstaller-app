@@ -26,23 +26,4 @@ node {
         }
         echo 'Tests completed.'
     }
-
-    stage('Deliver') {
-        echo 'Delivering artifacts...'
-
-        sh '''
-            echo "=== Build Artifacts ===" > log.txt
-            echo "Build Date: $(date)" >> log.txt
-            echo "Pipeline: submission-cicd-pipeline" >> log.txt
-            echo "" >> log.txt
-            echo "=== Test Results ===" >> log.txt
-            cat test-output.txt >> log.txt 2>/dev/null || echo "No test output found" >> log.txt
-            ls -la dist/ >> log.txt 2>/dev/null || true
-        '''
-
-        archiveArtifacts artifacts: 'log.txt', fingerprint: true
-        archiveArtifacts artifacts: 'dist/*', fingerprint: true, allowEmptyArchive: true
-
-        echo 'Delivery completed!'
-    }
 }
