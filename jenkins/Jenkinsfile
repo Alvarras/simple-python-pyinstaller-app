@@ -1,21 +1,34 @@
 pipeline {
     agent any
-    
+
     options {
         skipStagesAfterUnstable()
     }
-    
+
     stages {
         stage('Build') {
             steps {
-                echo 'Building simple-python-pyinstaller-app...'
-                sh 'python3 -m py_compile sources/add2vals.py sources/calc.py'
+                echo 'Building the application...'
+                docker.image('python:3.9-slim').inside('--user root') {
+                    sh '''
+                        apt-get update && apt-get install -y binutils
+                        pip install --break-system-packages pyinstaller
+                        pyinstaller --onefile sources/add2vals.py
+                    '''
+                }
+                echo 'Build completed.'
             }
         }
         stage('Test') {
             steps {
-                echo 'Testing simple-python-pyinstaller-app...'
-                sh 'python3 -m pytest sources/test_calc.py -v'
+                echo 'Running tests...'
+                docker.image('python:3.9-slim').inside('--user root') {
+                    sh '''
+                        pip install --break-system-packages pytest
+                        python -m pytest sources/test_calc.py -v 2>&1 | tee test-output.txt
+                    '''
+                }
+                echo 'Tests completed.'
             }
         }
     }
