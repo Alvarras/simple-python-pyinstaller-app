@@ -1,18 +1,105 @@
-# simple-python-pyinstaller-app
+# Submission CI/CD dengan Docker
 
-This repository is for the
-[Build a Python app with PyInstaller](https://jenkins.io/doc/tutorials/build-a-python-app-with-pyinstaller/)
-tutorial in the [Jenkins User Documentation](https://jenkins.io/doc/).
+Proyek ini berisi implementasi CI/CD pipeline menggunakan Jenkins dan Docker Compose sesuai submission criteria.
 
-The repository contains a simple Python application which is a command line tool "add2vals" that outputs the addition of two values. If at least one of the
-values is a string, "add2vals" treats both values as a string and instead
-concatenates the values. The "add2" function in the "calc" library (which
-"add2vals" imports) is accompanied by a set of unit tests. These are tested with pytest to check that this function works as expected and the results are saved
-to a JUnit XML report.
+## Struktur Proyek
 
-The delivery of the "add2vals" tool through PyInstaller converts this tool into
-a standalone executable file for Linux, which you can download through Jenkins
-and execute at the command line on Linux machines without Python.
+```
+simple-python-pyinstaller-app/
+├── docker-compose.yml          # Docker Compose configuration
+├── nginx/
+│   └── default.conf            # NGINX reverse proxy configuration
+├── jenkins/
+│   └── Jenkinsfile             # Scripted Pipeline configuration
+├── sources/
+│   ├── add2vals.py             # Main application
+│   ├── calc.py                 # Calc library
+│   └── test_calc.py            # Unit tests
+└── README.md
+```
 
-The `jenkins` directory contains an example of the `Jenkinsfile` (i.e. Pipeline)
-you'll be creating yourself during the tutorial.
+## Arsitektur
+
+```
+Docker Compose:
+├── Jenkins (port 49000 → 8080 internal)
+├── NGINX reverse proxy (port 9000 → Jenkins:8080)
+└── Jenkins Agent (port 50000)
+```
+
+## Cara Menjalankan
+
+### Prerequisites
+- Docker dan Docker Compose terinstall
+- Git terinstall
+
+### Step 1: Clone dan Jalankan Docker Compose
+
+```bash
+cd "submission-cicd"
+docker compose up -d
+```
+
+### Step 2: Dapatkan Initial Admin Password
+
+```bash
+docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
+```
+
+### Step 3: Akses Jenkins
+
+- **Via NGINX**: http://localhost:9000
+- **Direct**: http://localhost:49000
+
+### Step 4: Setup Jenkins
+
+1. Masukkan `initialAdminPassword`
+2. Pilih **"Install suggested plugins"**
+3. Buat admin user
+4. Selesaikan wizard
+
+### Step 5: Aktifkan Signup
+
+1. **Manage Jenkins → Security → Security Realm**
+2. Pilih **"Jenkins' own user database"**
+3. Centang **"Allow users to sign up"**
+4. Klik **Save**
+
+### Step 6: Buat Akun `dicoding`
+
+1. Logout dari admin
+2. Klik **"Create an account"**
+3. Isi:
+   - Username: `dicoding`
+   - Password: (bebas)
+   - Full name: `Dicoding Indonesia`
+   - Email: (email Anda)
+
+### Step 7: Buat Pipeline
+
+1. Login sebagai `dicoding`
+2. **New Item** → Nama: `submission-cicd-pipeline-<username>`
+3. Pilih **Pipeline** → OK
+4. **Build Triggers**: Centang **Poll SCM**
+5. Jadwal: `H/2 * * * *`
+6. **Pipeline**:
+   - Definition: **Pipeline script from SCM**
+   - SCM: **Git**
+   - Repository URL: URL repository Anda
+   - Branch: `*/master`
+   - Script Path: `jenkins/Jenkinsfile`
+7. **Save**
+
+### Step 8: Install Blue Ocean
+
+1. **Manage Jenkins → Plugins → Available plugins**
+2. Cari **Blue Ocean** → Install
+3. Restart Jenkins
+
+## Pipeline Stages
+
+Pipeline terdiri dari 3 stage:
+
+1. **Build**: Install PyInstaller dan build aplikasi
+2. **Test**: Jalankan pytest pada `sources/test_calc.py`
+3. **Deliver**: Archive artifacts (log.txt dan dist/*)
