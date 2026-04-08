@@ -7,6 +7,7 @@ node {
 
         docker.image('python:3.9-slim').inside('--user root') {
             sh '''
+                apt-get update && apt-get install -y binutils
                 pip install --break-system-packages pyinstaller
                 pyinstaller --onefile sources/add2vals.py
             '''
