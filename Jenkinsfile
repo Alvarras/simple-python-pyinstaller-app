@@ -5,9 +5,9 @@ node {
         echo 'Building the application...'
         checkout scm
 
-        docker.image('python:3.9-slim').inside {
+        docker.image('python:3.9-slim').inside('--user root') {
             sh '''
-                pip install pyinstaller
+                pip install --break-system-packages pyinstaller
                 pyinstaller --onefile sources/add2vals.py
             '''
         }
@@ -17,9 +17,9 @@ node {
     stage('Test') {
         echo 'Running tests...'
 
-        docker.image('python:3.9-slim').inside {
+        docker.image('python:3.9-slim').inside('--user root') {
             sh '''
-                pip install pytest
+                pip install --break-system-packages pytest
                 python -m pytest sources/test_calc.py -v 2>&1 | tee test-output.txt
             '''
         }
