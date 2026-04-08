@@ -1,105 +1,70 @@
-# Submission CI/CD dengan Docker
+# Simple Python CI/CD Pipeline
 
-Proyek ini berisi implementasi CI/CD pipeline menggunakan Jenkins dan Docker Compose sesuai submission criteria.
+CI/CD pipeline menggunakan Jenkins dan Docker untuk build, test, dan deliver aplikasi Python dengan PyInstaller.
 
 ## Struktur Proyek
 
 ```
 simple-python-pyinstaller-app/
 ├── docker-compose.yml          # Docker Compose configuration
+├── Dockerfile.jenkins          # Custom Jenkins image dengan Docker CLI
+├── .env                        # Auto-generated (host Docker GID)
+├── Jenkinsfile                 # Pipeline definition
 ├── nginx/
-│   └── default.conf            # NGINX reverse proxy configuration
-├── jenkins/
-│   └── Jenkinsfile             # Scripted Pipeline configuration
-├── sources/
-│   ├── add2vals.py             # Main application
-│   ├── calc.py                 # Calc library
-│   └── test_calc.py            # Unit tests
-└── README.md
+│   └── default.conf            # NGINX reverse proxy
+└── sources/
+    ├── add2vals.py             # Main application
+    ├── calc.py                 # Calc library
+    └── test_calc.py            # Unit tests
 ```
 
-## Arsitektur
+## Prerequisites
 
-```
-Docker Compose:
-├── Jenkins (port 49000 → 8080 internal)
-├── NGINX reverse proxy (port 9000 → Jenkins:8080)
-└── Jenkins Agent (port 50000)
-```
+- Docker & Docker Compose
+- Git
 
-## Cara Menjalankan
+## Menjalankan
 
-### Prerequisites
-- Docker dan Docker Compose terinstall
-- Git terinstall
-
-### Step 1: Clone dan Jalankan Docker Compose
+### 1. Setup Environment
 
 ```bash
-cd "submission-cicd"
+# Generate .env dengan Docker GID dari host
+echo "DOCKER_GID=$(getent group docker | cut -d: -f3)" > .env
+```
+
+### 2. Build & Start Containers
+
+```bash
+docker compose build --no-cache
 docker compose up -d
 ```
 
-### Step 2: Dapatkan Initial Admin Password
+### 3. Setup Jenkins
 
 ```bash
+# Dapatkan admin password
 docker exec jenkins cat /var/jenkins_home/secrets/initialAdminPassword
 ```
 
-### Step 3: Akses Jenkins
-
+Akses Jenkins:
 - **Via NGINX**: http://localhost:9000
 - **Direct**: http://localhost:49000
 
-### Step 4: Setup Jenkins
+1. Install suggested plugins
+2. Buat admin user
+3. Buat akun `dicoding` (Setup → Security → Allow users to sign up)
 
-1. Masukkan `initialAdminPassword`
-2. Pilih **"Install suggested plugins"**
-3. Buat admin user
-4. Selesaikan wizard
-
-### Step 5: Aktifkan Signup
-
-1. **Manage Jenkins → Security → Security Realm**
-2. Pilih **"Jenkins' own user database"**
-3. Centang **"Allow users to sign up"**
-4. Klik **Save**
-
-### Step 6: Buat Akun `dicoding`
-
-1. Logout dari admin
-2. Klik **"Create an account"**
-3. Isi:
-   - Username: `dicoding`
-   - Password: (bebas)
-   - Full name: `Dicoding Indonesia`
-   - Email: (email Anda)
-
-### Step 7: Buat Pipeline
+### 4. Buat Pipeline
 
 1. Login sebagai `dicoding`
-2. **New Item** → Nama: `submission-cicd-pipeline-<username>`
-3. Pilih **Pipeline** → OK
-4. **Build Triggers**: Centang **Poll SCM**
-5. Jadwal: `H/2 * * * *`
-6. **Pipeline**:
-   - Definition: **Pipeline script from SCM**
-   - SCM: **Git**
-   - Repository URL: URL repository Anda
-   - Branch: `*/master`
-   - Script Path: `jenkins/Jenkinsfile`
-7. **Save**
-
-### Step 8: Install Blue Ocean
-
-1. **Manage Jenkins → Plugins → Available plugins**
-2. Cari **Blue Ocean** → Install
-3. Restart Jenkins
+2. **New Item** → Pipeline → **Pipeline script from SCM**
+3. SCM: **Git**, repo URL Anda, branch `*/master`
+4. Script Path: `Jenkinsfile`
+5. Build Triggers: **Poll SCM** → `H/2 * * * *`
+6. Install plugin **Blue Ocean** (opsional)
 
 ## Pipeline Stages
 
-Pipeline terdiri dari 3 stage:
-
-1. **Build**: Install PyInstaller dan build aplikasi
-2. **Test**: Jalankan pytest pada `sources/test_calc.py`
-3. **Deliver**: Archive artifacts (log.txt dan dist/*)
+1. **Build** — Build aplikasi dengan PyInstaller di dalam container `python:3.9-slim`
+2. **Test** — Jalankan pytest pada `sources/test_calc.py`
+3. **Deliver** — Archive artifacts (log.txt dan dist/*)
