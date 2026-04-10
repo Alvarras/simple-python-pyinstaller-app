@@ -4,7 +4,7 @@ node {
         echo '=== STAGE: Build ==='
         checkout scm
 
-        sh 'rm -rf build dist *.spec __pycache__ .pytest_cache build-info.txt test-results.txt test-output.txt render-response.txt log.txt'
+        sh 'sudo rm -rf build dist *.spec __pycache__ .pytest_cache build-info.txt test-results.txt test-output.txt render-response.txt log.txt'
         sh 'touch build-info.txt && chmod 666 build-info.txt'
 
         docker.image('python:3.9-slim').inside('--user root') {
