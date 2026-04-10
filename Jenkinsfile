@@ -4,11 +4,10 @@ node {
         echo '=== STAGE: Build ==='
         checkout scm
 
-        sh 'sudo rm -rf build dist *.spec __pycache__ .pytest_cache build-info.txt test-results.txt test-output.txt render-response.txt log.txt'
-        sh 'touch build-info.txt && chmod 666 build-info.txt'
-
         docker.image('python:3.9-slim').inside('--user root') {
             sh '''
+                rm -rf build dist *.spec __pycache__ .pytest_cache build-info.txt test-results.txt test-output.txt render-response.txt log.txt
+                touch build-info.txt
                 apt-get update && apt-get install -y binutils
                 pip install --break-system-packages pyinstaller
                 pyinstaller --onefile sources/add2vals.py
@@ -23,10 +22,9 @@ node {
     stage('Test') {
         echo '=== STAGE: Test ==='
 
-        sh 'touch test-results.txt && chmod 666 test-results.txt'
-
         docker.image('python:3.9-slim').inside('--user root') {
             sh '''
+                touch test-results.txt
                 pip install --break-system-packages pytest
                 python -m pytest sources/test_calc.py -v 2>&1 | tee test-results.txt
                 echo "Test selesai: $(date)" >> build-info.txt
