@@ -4,6 +4,8 @@ node {
         echo '=== STAGE: Build ==='
         checkout scm
 
+        sh 'chmod -R 777 .'
+
         docker.image('python:3.9-slim').inside('--user root') {
             sh '''
                 apt-get update && apt-get install -y binutils
