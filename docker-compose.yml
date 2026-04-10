@@ -10,8 +10,8 @@ services:
     container_name: jenkins
     restart: unless-stopped
     ports:
-      - "49000:8080"      # Host 49000 → Jenkins internal 8080
-      - "50000:50000"     # Untuk Jenkins agent
+      - "49000:8080"
+      - "50000:50000"
     volumes:
       - jenkins_home:/var/jenkins_home
       - /var/run/docker.sock:/var/run/docker.sock
@@ -25,11 +25,44 @@ services:
     container_name: nginx-proxy
     restart: unless-stopped
     ports:
-      - "9000:80"         # Host 9000 → NGINX internal 80
+      - "9000:80"
     volumes:
       - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
     depends_on:
       - jenkins
+    networks:
+      - cicd-net
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    restart: unless-stopped
+    ports:
+      - "9091:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.enable-lifecycle'
+    networks:
+      - cicd-net
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    restart: unless-stopped
+    ports:
+      - "3031:3000"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    depends_on:
+      - prometheus
     networks:
       - cicd-net
 
@@ -39,4 +72,5 @@ networks:
 
 volumes:
   jenkins_home:
-    driver: local
+  prometheus_data:
+  grafana_data:

@@ -1,0 +1,15 @@
+# Prometheus Configuration untuk Jenkins CI/CD Monitoring
+
+global:
+  scrape_interval: 10s
+  evaluation_interval: 10s
+
+scrape_configs:
+  - job_name: 'jenkins'
+    metrics_path: '/prom'
+    static_configs:
+      - targets: ['jenkins:8080']
+
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']

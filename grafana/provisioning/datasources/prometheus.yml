@@ -1,0 +1,10 @@
+# This file configures Grafana to auto-connect to Prometheus datasource
+apiVersion: 1
+
+datasources:
+  - name: Prometheus
+    type: prometheus
+    access: proxy
+    url: http://prometheus:9090
+    isDefault: true
+    editable: true

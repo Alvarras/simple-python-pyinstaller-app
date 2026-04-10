@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: python-calc-app
+    runtime: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT app:app
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.14.0
+      - key: PORT
+        value: 5000

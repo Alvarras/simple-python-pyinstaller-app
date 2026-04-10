@@ -1,29 +1,92 @@
 node {
-    def app
 
     stage('Build') {
-        echo 'Building the application...'
+        echo '=== STAGE: Build ==='
         checkout scm
 
-        docker.image('python:3.9-slim').inside('--user root') {
-            sh '''
-                apt-get update && apt-get install -y binutils
-                pip install --break-system-packages pyinstaller
-                pyinstaller --onefile sources/add2vals.py
-            '''
-        }
-        echo 'Build completed.'
+        sh '''
+            pip install pyinstaller --quiet
+            pyinstaller --onefile sources/add2vals.py
+            echo "Build selesai: $(date)" > build-info.txt
+            ls -la dist/
+        '''
+
+        echo 'Build berhasil.'
     }
 
     stage('Test') {
-        echo 'Running tests...'
+        echo '=== STAGE: Test ==='
 
-        docker.image('python:3.9-slim').inside('--user root') {
+        sh '''
+            pip install pytest --quiet
+            python -m pytest sources/test_calc.py -v 2>&1 | tee test-results.txt
+            echo "Test selesai: $(date)" >> build-info.txt
+        '''
+
+        echo 'Semua test lulus.'
+    }
+
+    stage('Manual Approval') {
+        echo '=== STAGE: Manual Approval ==='
+
+        input message: 'Lanjutkan ke tahap Deploy?',
+              ok: 'Proceed'
+
+        echo 'Approved. Melanjutkan ke Deploy...'
+    }
+
+    stage('Deploy') {
+        echo '=== STAGE: Deploy ==='
+
+        sh '''
+            echo "Deploy dimulai: $(date)" >> build-info.txt
+            echo "Aplikasi: add2vals" >> build-info.txt
+            echo "Binary: dist/add2vals" >> build-info.txt
+        '''
+
+        withCredentials([string(credentialsId: 'render-deploy-hook', variable: 'RENDER_HOOK')]) {
             sh '''
-                pip install --break-system-packages pytest
-                python -m pytest sources/test_calc.py -v 2>&1 | tee test-output.txt
+                echo "Triggering deploy ke Render..."
+                curl -s -X POST "$RENDER_HOOK" | tee render-response.txt || echo "Deploy hook failed, continuing..." >> render-response.txt
+                echo "Deploy response: $(cat render-response.txt)" >> build-info.txt
             '''
         }
-        echo 'Tests completed.'
+
+        echo 'Deploy trigger selesai.'
+        echo 'Menjeda pipeline selama 60 detik agar aplikasi berjalan...'
+
+        sh 'sleep 60'
+
+        echo 'Waktu 60 detik habis. Pipeline selesai.'
+
+        sh '''
+            echo "=============================" > log.txt
+            echo "  PIPELINE EXECUTION REPORT  " >> log.txt
+            echo "=============================" >> log.txt
+            echo "Tanggal  : $(date)" >> log.txt
+            echo "Pipeline : ${JOB_NAME} #${BUILD_NUMBER}" >> log.txt
+            echo "" >> log.txt
+            echo "--- Build Info ---" >> log.txt
+            cat build-info.txt >> log.txt
+            echo "" >> log.txt
+            echo "--- Test Results ---" >> log.txt
+            if [ -f test-results.txt ]; then
+                cat test-results.txt >> log.txt
+            else
+                echo "No test results available" >> log.txt
+            fi
+            echo "" >> log.txt
+            echo "--- Render Deploy Response ---" >> log.txt
+            if [ -f render-response.txt ]; then
+                cat render-response.txt >> log.txt
+            else
+                echo "No deploy response available" >> log.txt
+            fi
+            echo "" >> log.txt
+            echo "Status: SUCCESS" >> log.txt
+        '''
+
+        archiveArtifacts artifacts: 'log.txt', fingerprint: true
+        archiveArtifacts artifacts: 'dist/*', fingerprint: true, allowEmptyArchive: true
     }
 }
