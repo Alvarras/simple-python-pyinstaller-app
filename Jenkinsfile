@@ -5,7 +5,7 @@ node {
         checkout scm
 
         sh '''
-            pip install pyinstaller --quiet
+            pip3 install pyinstaller --quiet || python3 -m pip install pyinstaller --quiet
             pyinstaller --onefile sources/add2vals.py
             echo "Build selesai: $(date)" > build-info.txt
             ls -la dist/
@@ -18,8 +18,8 @@ node {
         echo '=== STAGE: Test ==='
 
         sh '''
-            pip install pytest --quiet
-            python -m pytest sources/test_calc.py -v 2>&1 | tee test-results.txt
+            pip3 install pytest --quiet || python3 -m pip install pytest --quiet
+            python3 -m pytest sources/test_calc.py -v 2>&1 | tee test-results.txt
             echo "Test selesai: $(date)" >> build-info.txt
         '''
 
