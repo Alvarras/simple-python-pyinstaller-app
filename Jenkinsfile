@@ -4,12 +4,15 @@ node {
         echo '=== STAGE: Build ==='
         checkout scm
 
-        sh '''
-            pip3 install pyinstaller --quiet || python3 -m pip install pyinstaller --quiet
-            pyinstaller --onefile sources/add2vals.py
-            echo "Build selesai: $(date)" > build-info.txt
-            ls -la dist/
-        '''
+        docker.image('python:3.9-slim').inside('--user root') {
+            sh '''
+                apt-get update && apt-get install -y binutils
+                pip install --break-system-packages pyinstaller
+                pyinstaller --onefile sources/add2vals.py
+                echo "Build selesai: $(date)" > build-info.txt
+                ls -la dist/
+            '''
+        }
 
         echo 'Build berhasil.'
     }
@@ -17,11 +20,13 @@ node {
     stage('Test') {
         echo '=== STAGE: Test ==='
 
-        sh '''
-            pip3 install pytest --quiet || python3 -m pip install pytest --quiet
-            python3 -m pytest sources/test_calc.py -v 2>&1 | tee test-results.txt
-            echo "Test selesai: $(date)" >> build-info.txt
-        '''
+        docker.image('python:3.9-slim').inside('--user root') {
+            sh '''
+                pip install --break-system-packages pytest
+                python -m pytest sources/test_calc.py -v 2>&1 | tee test-results.txt
+                echo "Test selesai: $(date)" >> build-info.txt
+            '''
+        }
 
         echo 'Semua test lulus.'
     }
