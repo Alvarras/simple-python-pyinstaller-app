@@ -14,6 +14,7 @@ node {
                 echo "Build selesai: $(date)" > build-info.txt
                 ls -la dist/
             '''
+            sh 'chown -R 1000:1000 . 2>/dev/null || chmod -R 777 . 2>/dev/null || true'
         }
 
         echo 'Build berhasil.'
@@ -29,6 +30,7 @@ node {
                 python -m pytest sources/test_calc.py -v 2>&1 | tee test-results.txt
                 echo "Test selesai: $(date)" >> build-info.txt
             '''
+            sh 'chown -R 1000:1000 . 2>/dev/null || chmod -R 777 . 2>/dev/null || true'
         }
 
         echo 'Semua test lulus.'
@@ -47,16 +49,22 @@ node {
         echo '=== STAGE: Deploy ==='
 
         sh '''
-            echo "Deploy dimulai: $(date)" >> build-info.txt
+            echo "Deploy dimulai: $(date)" > build-info.txt
             echo "Aplikasi: add2vals" >> build-info.txt
             echo "Binary: dist/add2vals" >> build-info.txt
         '''
 
-        withCredentials([string(credentialsId: 'render-deploy-hook', variable: 'RENDER_HOOK')]) {
+        withCredentials([string(credentialsId: 'RENDER_DEPLOY_HOOK_URL', variable: 'RENDER_HOOK')]) {
             sh '''
                 echo "Triggering deploy ke Render..."
-                curl -s -X POST "$RENDER_HOOK" | tee render-response.txt || echo "Deploy hook failed, continuing..." >> render-response.txt
-                echo "Deploy response: $(cat render-response.txt)" >> build-info.txt
+                curl -s -w "\\nHTTP_CODE:%{http_code}" -X POST "$RENDER_HOOK" -H "Content-Type: application/json" | tee render-response.txt
+                HTTP_CODE=$(tail -1 render-response.txt | grep -o 'HTTP_CODE:[0-9]*' | cut -d: -f2)
+                if [ "$HTTP_CODE" = "200" ] || [ "$HTTP_CODE" = "201" ]; then
+                    echo "Deploy hook berhasil (HTTP $HTTP_CODE)"
+                else
+                    echo "Deploy hook gagal atau tidak valid (HTTP $HTTP_CODE)"
+                fi
+                echo "Deploy response: $(grep -v 'HTTP_CODE:' render-response.txt)" >> build-info.txt
             '''
         }
 
